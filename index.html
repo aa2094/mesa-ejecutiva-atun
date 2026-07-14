@@ -768,9 +768,9 @@ body { font-family: 'Source Sans Pro', 'Segoe UI', system-ui, sans-serif; backgr
           <div class="rc-hint">Bloqueos identificados. Clasifique con el semáforo según severidad.</div>
           <textarea id="ref-frena" placeholder="Describir los obstáculos o bloqueos encontrados..." onchange="wsAutoSave()"></textarea>
           <div class="reflection-semaforo" id="ref-semaforo">
-            <div class="sem-option sv" onclick="setRefSem('verde',this)"><span class="sem-dot verde" style="width:14px;height:14px;border:none;opacity:1;cursor:pointer"></span>Sin bloqueos</div>
-            <div class="sem-option sa" onclick="setRefSem('amarillo',this)"><span class="sem-dot amarillo" style="width:14px;height:14px;border:none;opacity:1;cursor:pointer"></span>Retraso leve</div>
-            <div class="sem-option sr" onclick="setRefSem('rojo',this)"><span class="sem-dot rojo" style="width:14px;height:14px;border:none;opacity:1;cursor:pointer"></span>Requiere escalamiento</div>
+            <div class="sem-option sv" data-sem="verde" onclick="setRefSem('verde',this)"><span class="sem-dot verde" style="width:14px;height:14px;border:none;opacity:1;cursor:pointer"></span>Sin bloqueos</div>
+            <div class="sem-option sa" data-sem="amarillo" onclick="setRefSem('amarillo',this)"><span class="sem-dot amarillo" style="width:14px;height:14px;border:none;opacity:1;cursor:pointer"></span>Retraso leve</div>
+            <div class="sem-option sr" data-sem="rojo" onclick="setRefSem('rojo',this)"><span class="sem-dot rojo" style="width:14px;height:14px;border:none;opacity:1;cursor:pointer"></span>Requiere escalamiento</div>
           </div>
         </div>
       </div>
@@ -1234,7 +1234,7 @@ function wsAutoSave() {
 
   // HT2: Challenge statement
   s.challenge = {};
-  ['gap-what','gap-where','gap-who','challenge-how','challenge-by','challenge-so'].forEach(id => {
+  ['ch-accion','ch-situacion','ch-usuario','ch-objetivo','ch-restriccion'].forEach(id => {
     const el = document.getElementById(id);
     if (el) s.challenge[id] = el.value;
   });
@@ -1267,7 +1267,7 @@ function wsAutoSave() {
 function wsLoadProblem(code) {
   const s = wsState[code] || {};
 
-  // HT1
+  // HT1: 5 Whys — column-based layout matching CSS (.whys-col, .whys-col-header, .whys-level)
   const whysProblemEl = document.getElementById('whys-problem-text');
   if (whysProblemEl) whysProblemEl.value = s.whysProblem || '';
   const whysGrid = document.getElementById('whys-grid');
@@ -1275,15 +1275,13 @@ function wsLoadProblem(code) {
     let html = '';
     const causeLabels = ['Causa 1', 'Causa 2', 'Causa 3'];
     const levelLabels = ['1er Por Qu\u00e9', '2do Por Qu\u00e9', '3er Por Qu\u00e9', '4to Por Qu\u00e9'];
-    html += '<div class="whys-header-row"><div class="whys-corner"></div>';
-    levelLabels.forEach(l => { html += '<div class="whys-col-header">' + l + '</div>'; });
-    html += '</div>';
     causeLabels.forEach((cause, ci) => {
-      html += '<div class="whys-row"><div class="whys-row-header">' + cause + '</div>';
-      levelLabels.forEach((_, li) => {
+      html += '<div class="whys-col"><div class="whys-col-header">' + cause + '</div>';
+      levelLabels.forEach((level, li) => {
         const id = 'why-' + ci + '-' + li;
         const val = (s.whysGrid && s.whysGrid[id]) || '';
-        html += '<div class="whys-cell"><textarea id="' + id + '" placeholder="\u00bfPor qu\u00e9?" onchange="wsAutoSave()">' + val + '</textarea></div>';
+        html += '<div class="whys-level"><div class="whys-level-label">' + level + '</div>';
+        html += '<div class="whys-cell"><textarea id="' + id + '" placeholder="\u00bfPor qu\u00e9 ocurre esto?" onchange="wsAutoSave()">' + val + '</textarea></div></div>';
       });
       html += '</div>';
     });
@@ -1295,21 +1293,30 @@ function wsLoadProblem(code) {
   }
 
   // HT2
-  ['gap-what','gap-where','gap-who','challenge-how','challenge-by','challenge-so'].forEach(id => {
+  ['ch-accion','ch-situacion','ch-usuario','ch-objetivo','ch-restriccion'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = (s.challenge && s.challenge[id]) || '';
   });
 
-  // HT3
+  // HT3: 3X3X3 Brainstorming — row-based grid matching CSS (.brainstorm-grid = 80px + 3 cols)
   const board = document.getElementById('bs-grid');
   if (board && !board.querySelector('.postit')) {
     let html = '';
-    const colors = ['#FFF9C4','#FFCCBC','#C8E6C9','#B3E5FC','#E1BEE7','#FFE0B2','#F0F4C3','#B2DFDB','#D1C4E9'];
-    for (let i = 0; i < 9; i++) {
-      const id = 'postit-' + i;
-      const val = (s.postits && s.postits[id]) || '';
-      html += '<div class="postit" style="background:' + colors[i] + '"><textarea id="' + id + '" placeholder="Idea ' + (i+1) + '..." onchange="wsAutoSave()">' + val + '</textarea></div>';
-    }
+    const rowLabels = ['Persona 1', 'Persona 2', 'Persona 3'];
+    const rowColors = ['#1B4F72', '#7D3C98', '#1E8449'];
+    const postitColors = [
+      ['#FFF9C4','#FFF9C4','#FFF9C4'],
+      ['#FFCCBC','#FFCCBC','#FFCCBC'],
+      ['#C8E6C9','#C8E6C9','#C8E6C9']
+    ];
+    rowLabels.forEach((label, ri) => {
+      html += '<div class="brainstorm-row-label" style="background:' + rowColors[ri] + '">' + label + '</div>';
+      for (let ci = 0; ci < 3; ci++) {
+        const id = 'postit-' + (ri * 3 + ci);
+        const val = (s.postits && s.postits[id]) || '';
+        html += '<div class="postit" style="background:' + postitColors[ri][ci] + '"><textarea id="' + id + '" placeholder="Idea ' + (ci+1) + '..." onchange="wsAutoSave()">' + val + '</textarea></div>';
+      }
+    });
     board.innerHTML = html;
   } else if (board) {
     board.querySelectorAll('.postit textarea').forEach(ta => {
@@ -1342,6 +1349,81 @@ function setRefSem(color, el) {
 
 function cycleStepClick(wsNum) {
   if (wsNum >= 1 && wsNum <= 5) wsSwitch(wsNum);
+}
+
+// HT2: Challenge statement preview
+function updateChallenge() {
+  const accion = document.getElementById('ch-accion')?.value || '';
+  const situacion = document.getElementById('ch-situacion')?.value || '';
+  const usuario = document.getElementById('ch-usuario')?.value || '';
+  const objetivo = document.getElementById('ch-objetivo')?.value || '';
+  const restriccion = document.getElementById('ch-restriccion')?.value || '';
+  const wrap = (v, cls) => v ? '<span class="filled">' + v + '</span>' : '<span class="empty">&hellip;</span>';
+  document.getElementById('challenge-text').innerHTML =
+    '\u00bfC\u00f3mo podemos ' + wrap(accion) + ' ' + wrap(situacion) +
+    ' de ' + wrap(usuario) + ' para que puedan ' + wrap(objetivo) +
+    ', considerando ' + wrap(restriccion) + '?';
+  wsAutoSave();
+}
+
+// HT3: Brainstorm timer
+let bsTimerInterval = null;
+let bsTimeLeft = 300;
+let bsRound = 1;
+
+function startTimer() {
+  if (bsTimerInterval) return;
+  const timerEl = document.getElementById('bs-timer');
+  timerEl.classList.add('running');
+  bsTimerInterval = setInterval(() => {
+    bsTimeLeft--;
+    if (bsTimeLeft <= 0) {
+      clearInterval(bsTimerInterval);
+      bsTimerInterval = null;
+      timerEl.classList.remove('running');
+      bsRound = Math.min(bsRound + 1, 3);
+      document.getElementById('bs-round').textContent = 'Ronda ' + bsRound + ' de 3';
+      bsTimeLeft = 300;
+      timerEl.textContent = '5:00';
+      alert('\u00a1Tiempo! Roten a la siguiente fila.');
+      return;
+    }
+    const m = Math.floor(bsTimeLeft / 60);
+    const ss = String(bsTimeLeft % 60).padStart(2, '0');
+    timerEl.textContent = m + ':' + ss;
+  }, 1000);
+}
+
+function resetTimer() {
+  clearInterval(bsTimerInterval);
+  bsTimerInterval = null;
+  bsTimeLeft = 300;
+  bsRound = 1;
+  document.getElementById('bs-timer').textContent = '5:00';
+  document.getElementById('bs-timer').classList.remove('running');
+  document.getElementById('bs-round').textContent = 'Ronda 1 de 3';
+}
+
+function addBsRow() {
+  const grid = document.getElementById('bs-grid');
+  if (!grid) return;
+  const existingPostits = grid.querySelectorAll('.postit').length;
+  const rowNum = Math.floor(existingPostits / 3) + 1;
+  const colors = ['#B3E5FC','#E1BEE7','#FFE0B2','#F0F4C3','#B2DFDB','#D1C4E9'];
+  const rowColor = colors[(rowNum - 1) % colors.length];
+  const labelEl = document.createElement('div');
+  labelEl.className = 'brainstorm-row-label';
+  labelEl.style.background = '#7F8C8D';
+  labelEl.textContent = 'Persona ' + rowNum;
+  grid.appendChild(labelEl);
+  for (let c = 0; c < 3; c++) {
+    const id = 'postit-' + (existingPostits + c);
+    const postit = document.createElement('div');
+    postit.className = 'postit';
+    postit.style.background = rowColor;
+    postit.innerHTML = '<textarea id="' + id + '" placeholder="Idea ' + (c+1) + '..." onchange="wsAutoSave()"></textarea>';
+    grid.appendChild(postit);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
